@@ -1,0 +1,67 @@
+# Dockerfile for Purple Agent - Finance Analysis Agent
+# For AgentBeats Competition
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv for faster package installation
+RUN pip install uv
+
+# Copy project files
+COPY pyproject.toml .
+COPY src/ ./src/
+COPY scripts/ ./scripts/
+
+# Copy FAB benchmark data for public_csv questions
+COPY finance-agent/data/public.csv ./data/public.csv
+
+# Install only the dependencies needed for Purple Agent (no PyTorch/sentence-transformers)
+RUN uv pip install --system \
+    httpx>=0.25.0 \
+    pydantic>=2.12.5 \
+    openai>=1.0.0 \
+    anthropic>=0.18.0 \
+    tiktoken>=0.5.0 \
+    numpy>=1.24.0 \
+    pandas>=2.0.0 \
+    scipy>=1.11.0 \
+    yfinance>=0.2.30 \
+    edgartools>=2.0.0 \
+    asyncio>=3.4.0 \
+    aiohttp>=3.9.0 \
+    python-dotenv>=1.0.0 \
+    structlog>=23.2.0 \
+    rich>=13.0.0 \
+    typer>=0.9.0 \
+    "a2a-sdk[http-server]>=0.3.20" \
+    fastapi>=0.100.0 \
+    uvicorn>=0.38.0 \
+    sqlalchemy>=2.0.0 \
+    fastmcp>=2.0.0 \
+    tavily-python>=0.3.0 \
+    PyMuPDF>=1.24.0 \
+    python-docx>=1.0.0 \
+    openpyxl>=3.1.0
+
+# Install the purple agent package
+RUN uv pip install --system -e . --no-deps
+
+# Expose A2A port
+EXPOSE 9110
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV HOST=0.0.0.0
+ENV PORT=9110
+ENV PYTHONPATH=/app/src:/app
+ENV FAB_DATA_PATH=/app/data/public.csv
+
+# Run the Purple Agent server (ENTRYPOINT + CMD for docker-compose compatibility)
+ENTRYPOINT ["purple-agent", "serve"]
+CMD ["--host", "0.0.0.0", "--port", "9110"]

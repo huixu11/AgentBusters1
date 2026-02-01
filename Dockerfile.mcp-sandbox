@@ -1,0 +1,12 @@
+FROM python:3.11-slim
+WORKDIR /app
+
+# Install minimal deps
+RUN pip install fastmcp numpy pandas scipy yfinance
+
+COPY src/ ./src/
+ENV PYTHONPATH=/app/src
+RUN apt-get update && apt-get install -y --no-install-recommends wget && rm -rf /var/lib/apt/lists/*
+
+EXPOSE 8000
+CMD ["fastmcp", "run", "src/mcp_servers/sandbox.py:create_sandbox_server", "--transport", "http", "--host", "0.0.0.0", "--port", "8000"]
